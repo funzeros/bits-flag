@@ -7,18 +7,35 @@
  * @beta
  */
 
-export class BitsFlag<T extends string> {
+export class BitsFlag<T extends string | number | symbol> {
   private status = 0
 
   private count = 0
 
   private bits: Map<T, number> = new Map()
 
-  private set(key: T) {
+  private set(key: T, value?: number) {
+    if (value) {
+      this.bits.set(key, value)
+      this.status = Math.max(...Array.from(this.bits.values())) + 1
+      return
+    }
     this.bits.set(key, 1 << ++this.count)
   }
 
-  private get(key: T) {
+  /**
+   * 获取一个标记值
+   * @param key - input string
+   * @returns number
+   * @description 非静态值的实例获取到的是经过位运算的标记值
+   * @example
+   * ```ts
+   * bits.get('a')
+   * ```
+   *
+   * @beta
+   */
+  public get(key: T) {
     if (!this.bits.has(key)) {
       this.set(key)
     }
@@ -26,7 +43,7 @@ export class BitsFlag<T extends string> {
   }
 
   /**
-   * 添加一个状态
+   * 添加一个标记
    * @param key - input string
    * @returns BitsFlag
    * @example
@@ -42,7 +59,7 @@ export class BitsFlag<T extends string> {
   }
 
   /**
-   * 检测状态存在与否
+   * 检测标记存在与否
    * @param key - input string
    * @returns boolean
    * @example
@@ -57,7 +74,7 @@ export class BitsFlag<T extends string> {
   }
 
   /**
-   * 删除一个状态
+   * 删除一个标记
    * @param key - input string
    * @returns BitsFlag
    * @example
@@ -88,19 +105,67 @@ export class BitsFlag<T extends string> {
   }
 
   /**
-   * 初始化
-   * @returns BitsFlag
+   * 获取状态
+   * @returns number
    * @example
    * ```ts
-   * bits.reset()
+   * bits.getStatus()
    * ```
    *
    * @beta
    */
-  public reset() {
-    this.status = 0
-    this.count = 0
-    this.bits.clear()
+  public getStatus() {
+    return this.status
+  }
+
+  /**
+   * 设置状态
+   * @param status - input number
+   * @returns BitsFlag
+   * @example
+   * ```ts
+   * bits.setStatus()
+   * ```
+   *
+   * @beta
+   */
+  public setStatus(status: number) {
+    this.status = status
     return this
   }
+
+  /**
+   * 静态创建
+   * @param enums - input enum object
+   * @param useValue - input boolean
+   * @description useValue为是否使用枚举值，为true时enums枚举对象的值必须为数字类型
+   * @returns BitsFlag
+   * @example
+   * ```ts
+   * BitsFlag.create({a:1,b:2},true)
+   * BitsFlag.create({a:'A',b:'B'})
+   * ```
+   *
+   * @beta
+   */
+  public static create<T extends CreateEnums<R>, R extends boolean>(
+    enums?: T,
+    useValue?: R,
+  ) {
+    const instance = new BitsFlag<keyof T>()
+    if (!enums) return instance
+    if (useValue) {
+      Object.keys(enums).forEach(key => {
+        instance.set(key, enums[key])
+      })
+    } else {
+      Object.keys(enums).forEach(key => {
+        instance.set(key)
+      })
+    }
+    return instance
+  }
+}
+interface CreateEnums<R> {
+  [k: string]: R extends true ? number : any
 }
